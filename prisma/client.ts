@@ -11,7 +11,8 @@ import { PrismaClient } from "../src/generated/prisma/client";
  * two, so it lives here rather than being repeated in every script.
  */
 
-export const DATABASE_URL = process.env.DATABASE_URL ?? "file:./prisma/dsaforge.db";
+export const DATABASE_URL =
+  process.env.DATABASE_URL ?? process.env.TURSO_DATABASE_URL ?? "file:./prisma/dsaforge.db";
 
 export const DATABASE_AUTH_TOKEN =
   process.env.DATABASE_AUTH_TOKEN ?? process.env.TURSO_AUTH_TOKEN;

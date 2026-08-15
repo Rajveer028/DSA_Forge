@@ -59,7 +59,9 @@ export function isFileDatabase(url: string) {
 
 export const serverEnv = {
   get databaseUrl() {
-    return optional("DATABASE_URL") ?? DEFAULT_DATABASE_URL;
+    // TURSO_DATABASE_URL is what Vercel's Turso integration injects; accepting
+    // it means adding the integration configures the app with no manual entry.
+    return optional("DATABASE_URL") ?? optional("TURSO_DATABASE_URL") ?? DEFAULT_DATABASE_URL;
   },
   /**
    * Auth token for a remote libsql database. Turso hands this out next to the
