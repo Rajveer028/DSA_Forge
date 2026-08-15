@@ -1,26 +1,269 @@
 @import "tailwindcss";
 
+/* next-themes writes `class="dark"` on <html>, so wire Tailwind v4's dark
+   variant to the class strategy rather than prefers-color-scheme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   DSA Forge palette
+   Deep navy ground, electric blue for action, purple for AI, green for success,
+   orange for highlights. Dark is the primary developer experience; light is a
+   first-class alternative rather than an inversion afterthought.
+--------------------------------------------------------------------------- */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --forge-bg: 220 34% 5%;
+  --forge-bg-elevated: 220 30% 8%;
+  --forge-surface: 220 28% 10%;
+  --forge-surface-hover: 220 26% 13%;
+  --forge-border: 220 20% 18%;
+  --forge-border-strong: 220 18% 26%;
+
+  --forge-text: 213 30% 96%;
+  --forge-text-muted: 216 14% 66%;
+  --forge-text-subtle: 217 12% 48%;
+
+  --forge-primary: 217 91% 60%;
+  --forge-primary-strong: 221 83% 53%;
+  --forge-primary-soft: 217 91% 60%;
+
+  --forge-ai: 258 90% 66%;
+  --forge-success: 152 69% 45%;
+  --forge-warning: 38 92% 55%;
+  --forge-danger: 350 84% 60%;
+
+  --forge-ring: 217 91% 60%;
+  --radius: 0.75rem;
+}
+
+.light {
+  --forge-bg: 220 33% 98%;
+  --forge-bg-elevated: 0 0% 100%;
+  --forge-surface: 0 0% 100%;
+  --forge-surface-hover: 220 20% 96%;
+  --forge-border: 220 16% 88%;
+  --forge-border-strong: 220 14% 78%;
+
+  --forge-text: 222 47% 11%;
+  --forge-text-muted: 220 12% 40%;
+  --forge-text-subtle: 220 10% 52%;
+
+  --forge-primary: 221 83% 53%;
+  --forge-primary-strong: 224 76% 45%;
+
+  --forge-ai: 258 82% 57%;
+  --forge-success: 152 62% 36%;
+  --forge-warning: 32 90% 45%;
+  --forge-danger: 350 74% 48%;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: hsl(var(--forge-bg));
+  --color-bg-elevated: hsl(var(--forge-bg-elevated));
+  --color-surface: hsl(var(--forge-surface));
+  --color-surface-hover: hsl(var(--forge-surface-hover));
+  --color-border-subtle: hsl(var(--forge-border));
+  --color-border-strong: hsl(var(--forge-border-strong));
+
+  --color-text-primary: hsl(var(--forge-text));
+  --color-text-muted: hsl(var(--forge-text-muted));
+  --color-text-subtle: hsl(var(--forge-text-subtle));
+
+  --color-forge: hsl(var(--forge-primary));
+  --color-forge-strong: hsl(var(--forge-primary-strong));
+  --color-ai: hsl(var(--forge-ai));
+  --color-success: hsl(var(--forge-success));
+  --color-warning: hsl(var(--forge-warning));
+  --color-danger: hsl(var(--forge-danger));
+
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.125rem;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    border-color: hsl(var(--forge-border));
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: hsl(var(--forge-bg));
+    color: hsl(var(--forge-text));
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: hsl(var(--forge-primary) / 0.3);
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--forge-ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+
+  /* Scrollbars tuned to the surface palette instead of the OS default. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--forge-border-strong));
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--forge-text-subtle));
+    background-clip: content-box;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .forge-card {
+    background-color: hsl(var(--forge-surface));
+    border: 1px solid hsl(var(--forge-border));
+    border-radius: var(--radius-2xl);
+  }
+
+  .forge-panel {
+    background-color: hsl(var(--forge-bg-elevated));
+    border: 1px solid hsl(var(--forge-border));
+  }
+
+  /* Faint grid used behind the hero and portal headers. */
+  .forge-grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--forge-border) / 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--forge-border) / 0.5) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
+  }
+
+  .forge-glow {
+    box-shadow:
+      0 0 0 1px hsl(var(--forge-primary) / 0.2),
+      0 8px 40px -12px hsl(var(--forge-primary) / 0.35);
+  }
+
+  .text-gradient-forge {
+    background: linear-gradient(
+      100deg,
+      hsl(var(--forge-text)) 10%,
+      hsl(var(--forge-primary)) 55%,
+      hsl(var(--forge-ai)) 95%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--forge-surface)) 25%,
+      hsl(var(--forge-surface-hover)) 37%,
+      hsl(var(--forge-surface)) 63%
+    );
+    background-size: 400% 100%;
+    animation: forge-shimmer 1.4s ease infinite;
+    border-radius: 0.5rem;
+  }
+}
+
+@keyframes forge-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+@keyframes forge-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up {
+  animation: forge-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Radix overlay/content animations (no tailwindcss-animate dependency). */
+@keyframes forge-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes forge-overlay-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes forge-content-in {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes forge-content-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
+}
+@keyframes forge-pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes forge-slide-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@keyframes forge-slide-left-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+[data-forge-overlay][data-state="open"] { animation: forge-overlay-in 0.16s ease; }
+[data-forge-overlay][data-state="closed"] { animation: forge-overlay-out 0.16s ease; }
+[data-forge-content][data-state="open"] { animation: forge-content-in 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+[data-forge-content][data-state="closed"] { animation: forge-content-out 0.16s ease; }
+[data-forge-pop][data-state="open"] { animation: forge-pop-in 0.14s ease-out; }
+[data-forge-drawer][data-state="open"] { animation: forge-slide-left 0.24s cubic-bezier(0.16, 1, 0.3, 1); }
+[data-forge-drawer][data-state="closed"] { animation: forge-slide-left-out 0.2s ease-in; }
+
+@keyframes forge-pulse-ring {
+  0% { box-shadow: 0 0 0 0 hsl(var(--forge-success) / 0.45); }
+  70% { box-shadow: 0 0 0 12px hsl(var(--forge-success) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--forge-success) / 0); }
+}
+
+.animate-pulse-ring {
+  animation: forge-pulse-ring 1.6s ease-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Monaco needs an explicit background so it does not flash white on mount. */
+.monaco-editor,
+.monaco-editor-background,
+.monaco-editor .margin {
+  background-color: hsl(var(--forge-bg-elevated)) !important;
 }

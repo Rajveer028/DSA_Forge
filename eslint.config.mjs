@@ -5,13 +5,17 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Prisma writes this; it is machine-generated and already @ts-nocheck.
+    "src/generated/**",
+    // The sandbox worker is a standalone CommonJS Node service with no
+    // relationship to the Next.js app or its module system.
+    "sandbox/**",
   ]),
 ]);
 

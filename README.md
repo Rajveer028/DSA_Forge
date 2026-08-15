@@ -1,36 +1,306 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DSA Forge
 
-## Getting Started
+**Forge Your DSA Skills. Crack Your Dream Interview.**
 
-First, run the development server:
+An AI-powered platform for DSA practice, company-focused interview preparation
+and university coding assessments — LeetCode-style practice, an AI interview
+coach and a university coding lab under one product.
+
+---
+
+## The three portals
+
+Everything below authentication lives behind a persistent, collapsible left
+sidebar. The three portals are always one click away.
+
+| Portal | Route | What it does |
+| --- | --- | --- |
+| 💻 **Practice Arena** | `/practice` | 300 curated problems (100 Easy / 100 Medium / 100 Hard) across 21 topics. Monaco editor, C / C++ / Java / Python, Run against samples, Submit against the hidden suite, progressive AI hints, Reveal Answer, submission history. |
+| 🤖 **AI Interview Prep** | `/interview-prep` | Pick a target company, get a readiness score, strong/weak topic breakdown and a concrete plan built from your real submission history. Generate new problems that pass a validation pipeline before they become practice content. |
+| 🏫 **University Assessment** | `/university` | Faculty author problems with public/hidden/edge/stress test cases, build a paper, assign 23 / 30 / 40 / 50 or any number of students, schedule it. Students sit a timed, auto-saving assessment; marks, ranking, analytics and similarity review are automatic. |
+
+---
+
+## Stack
+
+| Layer | Choice |
+| --- | --- |
+| Framework | Next.js 16 (App Router, Server Components, Route Handlers) |
+| Language | TypeScript, strict |
+| Styling | Tailwind CSS v4, Radix primitives, Lucide icons |
+| Auth | Clerk (`@clerk/nextjs` 7) |
+| Database | Neon PostgreSQL |
+| ORM | Prisma 7 with the `@prisma/adapter-pg` driver adapter |
+| Editor | Monaco |
+| Charts | Recharts |
+| AI | Provider-agnostic interface behind `AI_PROVIDER` / `AI_API_KEY` |
+| Execution | Isolated Docker worker (`sandbox/`) with a bounded work queue |
+
+---
+
+## Setup
+
+### 1. Install
+
+```bash
+npm install
+```
+
+### 2. Environment
+
+```bash
+cp .env.example .env
+```
+
+Fill in `.env`. The three that matter to get running:
+
+| Variable | Where it comes from |
+| --- | --- |
+| `DATABASE_URL` | Neon console → your project → **Pooled connection**. Or `npx neonctl@latest init`. |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk dashboard → API keys |
+| `CLERK_SECRET_KEY` | Clerk dashboard → API keys |
+
+`AI_API_KEY` is optional — see [AI is optional](#ai-is-optional).
+
+<details>
+<summary>Setting Clerk up with the CLI instead</summary>
+
+```bash
+clerk auth login
+clerk init --app app_3HtIfMHaA35cghBPBbCOoxHUTlX
+clerk doctor
+```
+
+Run `clerk auth login` **before** `clerk init`. The CLI writes the two keys into
+your `.env`; everything else in this repo is already wired for Clerk's App
+Router integration (`clerkMiddleware()`, `ClerkProvider` inside `<body>`,
+`await auth()` server-side).
+</details>
+
+### 3. Database
+
+```bash
+npm run db:migrate      # creates the schema
+npm run db:seed         # loads 300 problems, companies, achievements, sample university
+```
+
+Or both plus client generation in one step:
+
+```bash
+npm run setup
+```
+
+### 4. Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>, sign up, complete onboarding, and you land in the
+dashboard.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 5. Faculty access (optional)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+University faculty rights are deliberately **not** self-service. After the
+person has signed in once:
 
-## Learn More
+```bash
+npm run make:faculty -- their@email.com
+npm run db:seed              # creates the sample question bank + assessment
+```
 
-To learn more about Next.js, take a look at the following resources:
+Add `--admin` to also grant the platform admin role. Students join a university
+from the University portal with the join code shown on the faculty dashboard.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Development server |
+| `npm run build` | Generate the Prisma client, then a production build |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint |
+| `npm run db:migrate` | Create/apply a migration |
+| `npm run db:seed` | Seed the catalogue and reference data |
+| `npm run db:verify` | Rebuild the catalogue and assert its integrity (no database needed) |
+| `npm run db:studio` | Prisma Studio |
+| `npm run make:faculty -- <email>` | Grant faculty (and optionally admin) rights |
+| `npm run sandbox` | Run the isolated execution worker |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## How the question catalogue stays correct
+
+Every problem in `prisma/seed-data/` declares a **JavaScript reference
+solution** alongside its test inputs. The seed runs that reference to *produce*
+each expected output, so the answer key cannot drift from the statement — there
+are no hand-copied expected values anywhere.
+
+`npm run db:verify` rebuilds the whole catalogue (executing all 300 reference
+solutions) and asserts the structure:
+
+```
+  Easy            100
+  Medium          100
+  Hard            100
+  Published       300
+  Test cases      2120 (all generated by each problem's reference solution)
+  Topics covered  21
+```
+
+Every problem carries at least one public sample and at least three
+hidden/edge cases, three progressive hints, a worked example, an editorial
+approach and stated complexities.
+
+---
+
+## Security model
+
+The parts that are usually faked are real here.
+
+**Nothing that decides an outcome is accepted from the client.** Verdicts, pass
+counts, solved status, marks, timers, test ownership and student assignment are
+all computed or verified server-side. `src/lib/validation/schemas.ts` parses
+every payload crossing a trust boundary, and no schema accepts a user id, a
+role or a score.
+
+**Hidden test data never reaches the browser.** The problem page's Prisma
+`select` deliberately excludes solutions, editorials and test cases. `Run` only
+ever loads `SAMPLE` cases. `Submit` runs everything but the judge strips the
+input, expected output and actual output of non-sample cases before the
+response leaves the server.
+
+**Submitted code runs in a sandbox, never in the app process.** See
+[`sandbox/README.md`](sandbox/README.md). Each submission gets a single-use
+container with no network, a read-only root filesystem, dropped capabilities,
+no-new-privileges, cgroup CPU/memory/PID caps, a wall-clock kill and an output
+cap. The worker holds **no** database URL, Clerk secret or AI key.
+
+The local development driver (`EXECUTION_DRIVER=local`) applies a stripped
+environment, argv-only commands, a hard timeout, an stdout cap and — on POSIX —
+CPU, address-space and process rlimits. It is **not** a security boundary and
+refuses to start when `NODE_ENV=production`.
+
+**Rate limiting** covers every abusable entry point: code runs, submissions, AI
+hints, AI generation, search and writes.
+
+**University integrity.** The attempt deadline is derived from the `startedAt`
+timestamp the server wrote, never from the browser clock. Every autosave, run,
+submit and final submit re-checks it, and an expired attempt is closed by the
+server even if the tab is left open. Students cannot enter unassigned tests,
+read another student's result, see hidden cases, or submit after expiry.
+
+---
+
+## AI is optional
+
+Set `AI_API_KEY` and the AI features light up. Leave it unset and the product
+still works:
+
+| Feature | With an AI key | Without |
+| --- | --- | --- |
+| Hints | Generated, escalating per problem | Curated hint ladder stored with each problem |
+| Recommendations | AI-written plan | Deterministic adaptive engine over the same performance snapshot |
+| Learning path | AI-sequenced | Curriculum-ordered by your topic mastery |
+| Readiness score | Same computation, plus an AI narrative | Computed from coverage and weighted topic mastery |
+| Problem generation | Available | Disabled, with the reason shown in the UI |
+| Code analysis / explanation | Available | Disabled, with the reason shown in the UI |
+
+Switching provider is an environment change, not a code change — the whole app
+talks to one `AIProvider` interface. Anthropic and any OpenAI-compatible
+endpoint are supported out of the box.
+
+### Generated problems are not trusted
+
+A generated problem goes through a validation pipeline before it can become
+practice content:
+
+```
+generation → schema → consistency → test cases → reference solution executed → difficulty → draft → publish
+```
+
+The decisive gate is **solution**: the model's own reference implementation is
+compiled and run in the sandbox against the test cases it produced. Expected
+outputs that disagree with the verified run are rewritten from the run; anything
+that fails a gate stays a draft in the admin review queue.
+
+### Company labelling
+
+We never claim a problem was actually asked at a company. Every association
+carries a provenance level shown in the UI:
+
+- **Verified** — sourced from published, verifiable historical data
+- **Company-style** — matches the patterns and difficulty that company screens on
+- **AI pattern** — generated to drill the same technique
+
+Everything the seed loads is *Company-style*.
+
+---
+
+## Project structure
+
+```
+prisma/
+  schema.prisma             30 models, enums, indexes
+  seed.ts                   idempotent seed
+  verify-catalog.ts         catalogue integrity check
+  make-faculty.ts           out-of-band faculty grant
+  seed-data/                the 300-problem catalogue + reference data
+sandbox/
+  server.js                 isolated execution worker
+  README.md                 the isolation model, in detail
+src/
+  app/
+    (marketing)/            public landing page
+    (auth)/                 Clerk sign-in / sign-up
+    onboarding/             five-step profile wizard
+    (app)/                  everything behind the persistent sidebar
+      dashboard/ practice/ interview-prep/ university/
+      progress/ achievements/ profile/ settings/ admin/
+    api/                    route handlers
+  components/
+    layout/ practice/ interview/ university/ editor/ charts/ ui/
+  lib/
+    auth/                   session + university permissions
+    db.ts                   lazy Prisma singleton
+    ai/                     provider abstraction, prompts, validation pipeline
+    execution/              drivers, judge, work queue
+    analytics/              progress, achievements, adaptive engine, similarity
+    university/             assessment lifecycle and evaluation
+    validation/             Zod schemas for every boundary
+  types/
+```
+
+---
+
+## Production notes
+
+1. **Point the execution driver at the sandbox.** `EXECUTION_DRIVER=remote` plus
+   `EXECUTION_SERVICE_URL` and `EXECUTION_SERVICE_TOKEN`. Run the worker on a
+   host that is not the web server and never expose its port publicly.
+2. **Run migrations, not `db push`.** `npm run db:deploy`.
+3. **Use Neon's pooled connection string** — the app opens a connection per
+   serverless invocation.
+4. **Set `ADMIN_EMAILS`** before the first admin signs in.
+5. The in-process work queue is per-instance. Horizontal scaling belongs in the
+   worker service, which is where the containers actually run.
+
+---
+
+## Known limitations
+
+- **Reference solutions in all four languages** are authored for a subset of the
+  catalogue (the flagship problems). Every problem has a complete written
+  editorial — approach, intuition, step-by-step algorithm and complexities — and
+  the Reveal Answer panel renders the editorial and states plainly when no code
+  is stored for a language.
+- **The local execution driver needs a toolchain on PATH** (`gcc`, `g++`,
+  `javac`/`java`, `python3`). Missing compilers produce a clear "toolchain not
+  installed" verdict rather than a silent failure.
+- **Memory reporting** is exact under the container driver; the local driver
+  reports it only where `/usr/bin/time` is available.
+- **Scheduled transitions** (opening and closing a test) are computed from the
+  clock on read rather than by a background job, so no scheduler is required to
+  run the platform.
