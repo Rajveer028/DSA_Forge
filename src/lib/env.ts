@@ -44,9 +44,29 @@ function developmentSessionSecret(): string {
 /** Local SQLite file, relative to the project root. */
 export const DEFAULT_DATABASE_URL = "file:./prisma/dsaforge.db";
 
+/**
+ * True for a database that lives in a file on this machine.
+ *
+ * A file database is perfect for local development and impossible on a
+ * serverless host: the filesystem there is read-only apart from /tmp, and every
+ * request may land on a fresh instance, so writes either fail outright or
+ * vanish. Deployments must point DATABASE_URL at a networked libsql database
+ * (Turso) instead.
+ */
+export function isFileDatabase(url: string) {
+  return url.startsWith("file:") || (!url.includes("://") && !url.startsWith(":memory:"));
+}
+
 export const serverEnv = {
   get databaseUrl() {
     return optional("DATABASE_URL") ?? DEFAULT_DATABASE_URL;
+  },
+  /**
+   * Auth token for a remote libsql database. Turso hands this out next to the
+   * database URL; a local `file:` database needs none.
+   */
+  get databaseAuthToken() {
+    return optional("DATABASE_AUTH_TOKEN") ?? optional("TURSO_AUTH_TOKEN");
   },
   /**
    * Secret used to sign session cookies. A generated fallback keeps local
@@ -137,11 +157,19 @@ function isReal(key: string): boolean {
  * Storage and authentication are built in, so they need no configuration.
  */
 export function envStatus() {
+  const url = serverEnv.databaseUrl;
+  const sessionSecretConfigured = isReal("SESSION_SECRET");
+  const production = serverEnv.isProduction;
+
+  // In production a file database and a missing session secret are each fatal,
+  // so report them as *not configured* rather than as healthy defaults — this
+  // probe is the first thing anyone checks when a deployment misbehaves.
   return {
-    database: true,
-    databaseUrl: serverEnv.databaseUrl,
-    auth: true,
-    sessionSecretConfigured: isReal("SESSION_SECRET"),
+    database: !(production && isFileDatabase(url)),
+    databaseUrl: url,
+    databaseIsFile: isFileDatabase(url),
+    auth: production ? sessionSecretConfigured : true,
+    sessionSecretConfigured,
     ai: isReal("AI_API_KEY"),
     executionRemote: isReal("EXECUTION_SERVICE_URL"),
   };

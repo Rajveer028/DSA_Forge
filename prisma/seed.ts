@@ -1,6 +1,5 @@
 import "dotenv/config";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { createScriptClient, describeTarget } from "./client";
 import { TOPICS } from "../src/lib/constants";
 import { GENERIC_STARTER } from "../src/lib/execution/languages";
 import { CATALOG_COUNTS, QUESTION_CATALOG, SPARE_QUESTIONS } from "./seed-data";
@@ -23,9 +22,7 @@ import type { SeedQuestion } from "./seed-data";
  * running it twice is safe.
  */
 
-const connectionString = process.env.DATABASE_URL ?? "file:./prisma/dsaforge.db";
-
-const db = new PrismaClient({ adapter: new PrismaLibSql({ url: connectionString }) });
+const db = createScriptClient();
 
 async function seedTopics() {
   for (const [index, topic] of TOPICS.entries()) {
@@ -392,7 +389,9 @@ async function seedUniversity() {
 }
 
 async function main() {
-  console.log("\nSeeding DSA Forge\n");
+  // Name the target: seeding the wrong database — the local file when you meant
+  // the deployment, or the reverse — is otherwise silent until much later.
+  console.log(`\nSeeding DSA Forge into ${describeTarget()}\n`);
 
   await seedTopics();
   const questionIds = await seedQuestions();

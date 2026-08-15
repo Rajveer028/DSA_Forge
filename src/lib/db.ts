@@ -1,6 +1,6 @@
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient } from "@/generated/prisma/client";
-import { serverEnv } from "@/lib/env";
+import { isFileDatabase, serverEnv } from "@/lib/env";
 
 /**
  * Prisma client singleton.
@@ -15,7 +15,25 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createClient(): PrismaClient {
-  const adapter = new PrismaLibSql({ url: serverEnv.databaseUrl });
+  const url = serverEnv.databaseUrl;
+
+  // Fail with the actual reason rather than letting every query die one by one
+  // with a confusing filesystem error deep inside the driver.
+  if (serverEnv.isProduction && isFileDatabase(url)) {
+    throw new Error(
+      `DATABASE_URL is "${url}", a file on the server's own disk, and this is a production deployment. ` +
+        "Serverless hosts have a read-only, per-request filesystem, so a file database cannot be read or written there. " +
+        "Point DATABASE_URL at a libsql database (libsql://…) and set DATABASE_AUTH_TOKEN. See DEPLOYMENT.md.",
+    );
+  }
+
+  const authToken = serverEnv.databaseAuthToken;
+  const adapter = new PrismaLibSql({
+    url,
+    // Only remote databases take a token; passing one to a file URL is an error.
+    ...(authToken && !isFileDatabase(url) ? { authToken } : {}),
+  });
+
   return new PrismaClient({
     adapter,
     log: serverEnv.isProduction ? ["error"] : ["error", "warn"],

@@ -1,6 +1,5 @@
 import "dotenv/config";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { createScriptClient } from "./client";
 import { DEV_UNIVERSITY } from "./seed-data/reference";
 
 /**
@@ -14,9 +13,7 @@ import { DEV_UNIVERSITY } from "./seed-data/reference";
  *   npm run make:faculty -- someone@university.edu --admin
  */
 
-const connectionString = process.env.DATABASE_URL ?? "file:./prisma/dsaforge.db";
-
-const db = new PrismaClient({ adapter: new PrismaLibSql({ url: connectionString }) });
+const db = createScriptClient();
 
 async function main() {
   const args = process.argv.slice(2);

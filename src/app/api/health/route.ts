@@ -28,8 +28,14 @@ export async function GET() {
     {
       status: ready ? "ok" : "degraded",
       checks: {
-        database: { configured: env.database, reachable: database },
-        auth: { configured: env.auth },
+        database: {
+          configured: env.database,
+          reachable: database,
+          // Names the single most common deployment mistake without printing
+          // the URL, which may carry credentials.
+          ...(env.databaseIsFile ? { kind: "file" as const } : { kind: "remote" as const }),
+        },
+        auth: { configured: env.auth, sessionSecret: env.sessionSecretConfigured },
         ai: { configured: isAIConfigured() },
         execution: {
           driver: sandbox?.driver ?? "unavailable",

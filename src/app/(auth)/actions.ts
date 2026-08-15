@@ -31,6 +31,38 @@ const registration = credentials.extend({
   fullName: z.string().trim().min(2, "Enter your name.").max(80),
 });
 
+/**
+ * Turns an infrastructure failure into something the operator can act on.
+ *
+ * A signed-out visitor must never learn anything about the deployment, so the
+ * detail only surfaces outside production; the full error always reaches the
+ * server log either way. The generic text used to blame a missing local
+ * migration, which is the wrong lead on a hosted deployment — there the cause
+ * is almost always an unset environment variable or a database URL that still
+ * points at a file on disk.
+ */
+function configurationProblem(error: unknown, verb: string): string {
+  const message = error instanceof Error ? error.message : String(error);
+
+  const known =
+    /SESSION_SECRET/.test(message)
+      ? "The server is missing SESSION_SECRET, so it cannot sign your session cookie."
+      : /production deployment|read-only|SQLITE_CANTOPEN|unable to open database|no such table/i.test(
+            message,
+          )
+        ? "The server cannot reach its database."
+        : /UNAUTHORIZED|401|auth token|authentication/i.test(message)
+          ? "The server was refused by its database — the auth token looks wrong or expired."
+          : null;
+
+  if (!known) {
+    return `We could not ${verb}. Please try again in a moment.`;
+  }
+  return serverEnv.isProduction
+    ? `${known} This is a server configuration problem, not something you did — see DEPLOYMENT.md.`
+    : `${known} ${message}`;
+}
+
 async function clientKey(email: string) {
   const headerList = await headers();
   const address =
@@ -98,10 +130,7 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
     await createSession(account.id, headerList.get("user-agent") ?? undefined);
   } catch (error) {
     console.error("[sign-up]", error);
-    return {
-      error:
-        "We could not create your account. If this is the first run, make sure the database has been created with `npm run db:migrate`.",
-    };
+    return { error: configurationProblem(error, "create your account") };
   }
 
   redirect("/onboarding");
@@ -157,10 +186,7 @@ export async function signInAction(_prev: AuthState, formData: FormData): Promis
     destination = account.profile?.onboardingCompleted ? "/dashboard" : "/onboarding";
   } catch (error) {
     console.error("[sign-in]", error);
-    return {
-      error:
-        "We could not sign you in. If this is the first run, make sure the database has been created with `npm run db:migrate`.",
-    };
+    return { error: configurationProblem(error, "sign you in") };
   }
 
   redirect(destination);
