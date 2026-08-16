@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import { ForbiddenError, UnauthorizedError } from "@/lib/auth/session";
 import { RateLimitError } from "@/lib/rate-limit";
 import { QueueOverflowError } from "@/lib/execution/queue";
+import { ExecutionUnavailableError } from "@/lib/execution/errors";
 import { AIRequestError, AIUnavailableError } from "@/lib/ai/provider";
 import { MissingEnvError } from "@/lib/env";
 
@@ -38,6 +39,12 @@ export function apiError(error: unknown): NextResponse<ApiErrorBody> {
   }
   if (error instanceof QueueOverflowError) {
     return NextResponse.json({ error: error.message, code: "QUEUE_FULL" }, { status: 429 });
+  }
+  if (error instanceof ExecutionUnavailableError) {
+    return NextResponse.json(
+      { error: error.message, code: error.code },
+      { status: error.status },
+    );
   }
   if (error instanceof AIUnavailableError) {
     return NextResponse.json({ error: error.message, code: "AI_UNAVAILABLE" }, { status: 503 });

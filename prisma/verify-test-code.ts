@@ -8,8 +8,13 @@ import { createScriptClient } from "./client";
  * separate accounts, exactly as two people in a room would.
  */
 
-const BASE = "http://127.0.0.1:3000";
-const SECRET = createHash("sha256").update(`dsa-forge-dev:${process.cwd()}`).digest("hex");
+const BASE =
+  process.argv.includes("--base")
+    ? process.argv[process.argv.indexOf("--base") + 1]
+    : "http://127.0.0.1:3000";
+const SECRET =
+  process.env.SESSION_SECRET ??
+  createHash("sha256").update(`dsa-forge-dev:${process.cwd()}`).digest("hex");
 const sign = (token: string) => createHmac("sha256", SECRET).update(token).digest("base64url");
 
 const db = createScriptClient();

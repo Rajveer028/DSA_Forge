@@ -40,6 +40,9 @@ export async function GET() {
         execution: {
           driver: sandbox?.driver ?? "unavailable",
           isolated: sandbox?.isolated ?? false,
+          // Whether code can actually be run here, and why not when it cannot.
+          available: sandbox?.available ?? false,
+          ...(sandbox?.reason ? { reason: sandbox.reason } : {}),
           queue: sandbox?.queue ?? null,
         },
       },

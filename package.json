@@ -18,6 +18,7 @@
     "db:verify": "tsx prisma/verify-catalog.ts",
     "db:verify:solutions": "tsx prisma/verify-solutions.ts",
     "db:verify:reveal": "tsx prisma/verify-reveal.ts",
+    "audit:routes": "tsx prisma/audit-routes.ts",
     "db:verify:testcode": "tsx prisma/verify-test-code.ts",
     "db:verify:attempt": "tsx prisma/verify-test-attempt.ts",
     "make:faculty": "tsx prisma/make-faculty.ts",

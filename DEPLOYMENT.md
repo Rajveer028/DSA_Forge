@@ -51,13 +51,26 @@ actually see:
 - `"reachable":false` — the URL is wrong, or the database is unreachable.
 - `"sessionSecret":false` — `SESSION_SECRET` is unset, and sign-in will fail.
 
+## Verifying a deployment
+
+`npm run audit:routes -- --base https://<your-app>.vercel.app` walks every page
+and API route as a signed-in user and reports the status of each. It is the
+fastest way to tell a configuration problem from a code problem: a wall of 503s
+means the database or session secret is wrong, while a single unexpected status
+points at one route.
+
 ## What still will not work, and why
 
 **Run and Submit.** Code execution compiles and runs real programs, which needs
 gcc, javac and python plus a sandbox — none of which exist on Vercel, and the
 local driver refuses to start in production on purpose (it is not a security
-boundary). Everything else works: sign-up, sign-in, browsing all 300 problems,
-revealing solutions, and the university portal including test codes.
+boundary).
+
+This is handled rather than left to crash: `/api/practice/run` answers **503
+EXECUTION_UNAVAILABLE** with a plain explanation, the editor shows it as a
+message, and `/api/health` reports `execution.available: false` with the reason.
+Everything else works — sign-up, sign-in, browsing all 300 problems, revealing
+solutions, and the university portal including test codes.
 
 To enable execution, deploy the containerised worker in [`sandbox/`](sandbox/)
 to a host that runs Docker — Railway, Fly.io, Render or any VPS — and set:
