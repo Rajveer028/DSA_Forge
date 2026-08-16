@@ -50,8 +50,5 @@ prisma/*.db-journal
 prisma/*.db-wal
 prisma/*.db-shm
 
-# Second Prisma client, generated only for the one-off SQLite -> Postgres copy
-/src/generated/prisma-sqlite
-
 # Written by the Java toolchain when the judge compiles a submission
 JavaLauncher.log

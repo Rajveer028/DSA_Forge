@@ -102,13 +102,17 @@ covers recommendations and learning paths without it.
 ## Appendix: the move from SQLite
 
 This project stored its data in a local SQLite file until it needed to be
-deployed. The move to PostgreSQL is recorded in
-[`prisma/migrate-to-postgres.ts`](prisma/migrate-to-postgres.ts), which copies
-every table parents-first through Prisma on both sides — so SQLite's integer
-booleans and text JSON are decoded and re-encoded correctly rather than being
-copied as raw bytes. Rows keep their original ids, which is what keeps every
-foreign key valid without remapping.
+deployed. All 4,822 rows were copied to PostgreSQL by a one-off script that
+read through a second generated Prisma client, so SQLite's integer booleans and
+text JSON were decoded and re-encoded rather than copied as raw bytes, and every
+row kept its id — which is what kept the foreign keys valid without remapping.
 
-It reads through a second generated client described by
-[`prisma/schema.sqlite.prisma`](prisma/schema.sqlite.prisma). Both files are
-kept so the migration can be repeated or audited; neither is used at runtime.
+The script and its companion schema were deleted afterwards. They depended on a
+generated client that is not in version control, so their presence broke
+`next build` on any machine that had not generated it first. Recover them from
+git history if the migration ever needs auditing or repeating:
+
+```bash
+git show d19b836:prisma/migrate-to-postgres.ts
+git show d19b836:prisma/schema.sqlite.prisma
+```
