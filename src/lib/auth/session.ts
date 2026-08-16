@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { serverEnv } from "@/lib/env";
 import { getSessionAccountId } from "@/lib/auth/sessions";
+import { getClerkAccountId } from "@/lib/auth/clerk-account";
 import type { UserProfileModel } from "@/generated/prisma/models";
 
 type UserProfile = UserProfileModel;
@@ -10,16 +11,27 @@ type UserProfile = UserProfileModel;
 /**
  * Authentication helpers.
  *
- * Sessions are local: a signed httpOnly cookie resolves to a row in
- * `auth_sessions`, which resolves to the account that owns the profile. Every
- * server entry point resolves the caller through these helpers — a
+ * Clerk is the identity provider: a Clerk session resolves to a local
+ * `UserAccount` mirror, which owns the profile. Accounts that predate Clerk
+ * still resolve through the local signed-cookie session, so nobody is locked
+ * out of data they created before the switch.
+ *
+ * Every server entry point resolves the caller through these helpers — a
  * client-supplied user id is never trusted anywhere in the codebase.
  */
 
 export type AuthedProfile = UserProfile;
 
-/** Account id for the current request, or null when signed out. */
+/**
+ * Account id for the current request, or null when signed out.
+ *
+ * Clerk is asked first. The local session is the fallback, which keeps two
+ * groups working: accounts created before this migration, and any deployment
+ * where the Clerk keys are absent.
+ */
 export const getAccountId = cache(async (): Promise<string | null> => {
+  const clerkAccountId = await getClerkAccountId();
+  if (clerkAccountId) return clerkAccountId;
   return getSessionAccountId();
 });
 

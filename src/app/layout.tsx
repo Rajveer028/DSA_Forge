@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "@/components/providers";
+import { isClerkConfigured } from "@/lib/auth/clerk-account";
 import { APP_DESCRIPTION, APP_NAME, APP_TAGLINE } from "@/lib/constants";
 import "./globals.css";
 
@@ -41,6 +43,12 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  // ClerkProvider belongs inside <body>, not around <html>. When the keys are
+  // absent it is left out entirely so the app still renders — Clerk throws on
+  // mount without a publishable key, which would take the whole site down.
+  const withClerk = (node: ReactNode) =>
+    isClerkConfigured() ? <ClerkProvider>{node}</ClerkProvider> : node;
+
   return (
     <html
       lang="en"
@@ -54,7 +62,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           Skip to content
         </a>
-        <Providers>{children}</Providers>
+        {withClerk(<Providers>{children}</Providers>)}
       </body>
     </html>
   );

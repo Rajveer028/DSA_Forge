@@ -80,6 +80,8 @@ if you use it):
 | `DATABASE_AUTH_TOKEN` | the token from step 1 | Turso rejects unauthenticated connections. |
 | `SESSION_SECRET` | a long random string | Signs session cookies. **The app throws without it in production** — generate one with `openssl rand -hex 32` or `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. |
 | `NEXT_PUBLIC_APP_URL` | `https://<your-app>.vercel.app` | Used in absolute links. |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `pk_...` | Clerk sign-in/sign-up. Without both Clerk keys the app falls back to its built-in email/password form. |
+| `CLERK_SECRET_KEY` | `sk_...` | Server-side Clerk calls. Never expose this to the browser. |
 | `ADMIN_EMAILS` | your email (optional) | Grants the platform ADMIN role on sign-up. |
 
 Redeploy after saving — environment variables are read at build and boot, so an

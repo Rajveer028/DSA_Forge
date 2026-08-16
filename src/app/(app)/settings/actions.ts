@@ -43,6 +43,15 @@ export async function changePasswordAction(
   });
   if (!account) return { error: "Account not found." };
 
+  // Accounts created through Clerk have no local password to change; Clerk owns
+  // the credential and its own UI is where it gets updated.
+  if (!account.passwordHash) {
+    return {
+      error:
+        "Your password is managed by your sign-in provider. Change it from your account settings there.",
+    };
+  }
+
   if (!(await verifyPassword(current, account.passwordHash))) {
     return { error: "Your current password is not correct." };
   }

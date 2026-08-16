@@ -197,8 +197,13 @@ enum AchievementCategory {
 model UserAccount {
   id           String  @id @default(cuid())
   email        String  @unique
+  /// Clerk owns authentication; this is the local mirror of a Clerk user, and
+  /// the join between a Clerk identity and everything the product stores.
+  /// Null on accounts created before Clerk, which can still sign in by password.
+  clerkUserId  String? @unique
   /// scrypt hash in the form  scrypt$N$r$p$salt$derivedKey  — never a password.
-  passwordHash String
+  /// Null for Clerk-created accounts, which have no local password at all.
+  passwordHash String?
   isActive     Boolean @default(true)
 
   lastLoginAt DateTime?
