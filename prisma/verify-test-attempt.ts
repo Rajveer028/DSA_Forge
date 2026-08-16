@@ -1,8 +1,7 @@
 import "dotenv/config";
 import { createHmac, createHash, randomBytes, scrypt } from "node:crypto";
 import { promisify } from "node:util";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { createScriptClient } from "./client";
 
 /**
  * A student who enrolled with a code must be able to actually sit the test:
@@ -14,9 +13,7 @@ const BASE = "http://127.0.0.1:3000";
 const SECRET = createHash("sha256").update(`dsa-forge-dev:${process.cwd()}`).digest("hex");
 const sign = (token: string) => createHmac("sha256", SECRET).update(token).digest("base64url");
 
-const db = new PrismaClient({
-  adapter: new PrismaLibSql({ url: process.env.DATABASE_URL ?? "file:./prisma/dsaforge.db" }),
-});
+const db = createScriptClient();
 
 async function makeUser(label: string, name: string) {
   const email = `${label}+${Date.now()}${Math.random().toString(36).slice(2, 6)}@example.com`;

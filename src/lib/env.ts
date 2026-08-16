@@ -41,34 +41,23 @@ function developmentSessionSecret(): string {
   return cachedDevSecret;
 }
 
-/** Local SQLite file, relative to the project root. */
-export const DEFAULT_DATABASE_URL = "file:./prisma/dsaforge.db";
+/** No default: a PostgreSQL connection string must be supplied. */
+export const DEFAULT_DATABASE_URL = "";
 
 /**
- * True for a database that lives in a file on this machine.
+ * True for the old on-disk SQLite default.
  *
- * A file database is perfect for local development and impossible on a
- * serverless host: the filesystem there is read-only apart from /tmp, and every
- * request may land on a fresh instance, so writes either fail outright or
- * vanish. Deployments must point DATABASE_URL at a networked libsql database
- * (Turso) instead.
+ * Storage moved to PostgreSQL, so a `file:` URL now only ever means DATABASE_URL
+ * was not supplied and something fell back to a stale default. Naming that is
+ * far more useful than the driver error it would otherwise become.
  */
 export function isFileDatabase(url: string) {
-  return url.startsWith("file:") || (!url.includes("://") && !url.startsWith(":memory:"));
+  return url.startsWith("file:") || (url.length > 0 && !url.includes("://"));
 }
 
 export const serverEnv = {
   get databaseUrl() {
-    // TURSO_DATABASE_URL is what Vercel's Turso integration injects; accepting
-    // it means adding the integration configures the app with no manual entry.
-    return optional("DATABASE_URL") ?? optional("TURSO_DATABASE_URL") ?? DEFAULT_DATABASE_URL;
-  },
-  /**
-   * Auth token for a remote libsql database. Turso hands this out next to the
-   * database URL; a local `file:` database needs none.
-   */
-  get databaseAuthToken() {
-    return optional("DATABASE_AUTH_TOKEN") ?? optional("TURSO_AUTH_TOKEN");
+    return optional("DATABASE_URL") ?? DEFAULT_DATABASE_URL;
   },
   /**
    * Secret used to sign session cookies. A generated fallback keeps local
@@ -167,7 +156,7 @@ export function envStatus() {
   // so report them as *not configured* rather than as healthy defaults — this
   // probe is the first thing anyone checks when a deployment misbehaves.
   return {
-    database: !(production && isFileDatabase(url)),
+    database: Boolean(url) && !isFileDatabase(url),
     databaseUrl: url,
     databaseIsFile: isFileDatabase(url),
     auth: production ? sessionSecretConfigured : true,

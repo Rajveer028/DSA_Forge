@@ -1,13 +1,14 @@
-import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { isFileDatabase, serverEnv } from "@/lib/env";
 
 /**
  * Prisma client singleton.
  *
- * Storage is a local SQLite file — no database server, no hosted account, no
- * credentials to configure. `DATABASE_URL` defaults to `file:./prisma/dsaforge.db`
- * and only needs setting if you want the file somewhere else.
+ * Storage is PostgreSQL, reached through the `pg` driver adapter. Use the
+ * pooled Neon host (`...-pooler...`) rather than the direct one: a serverless
+ * deployment opens a connection per instance, and the pooler is what keeps that
+ * from exhausting the database's connection limit.
  */
 
 const globalForPrisma = globalThis as unknown as {
@@ -18,21 +19,16 @@ function createClient(): PrismaClient {
   const url = serverEnv.databaseUrl;
 
   // Fail with the actual reason rather than letting every query die one by one
-  // with a confusing filesystem error deep inside the driver.
-  if (serverEnv.isProduction && isFileDatabase(url)) {
+  // inside the driver. A `file:` URL here means DATABASE_URL never arrived and
+  // the old SQLite default is still in place.
+  if (isFileDatabase(url)) {
     throw new Error(
-      `DATABASE_URL is "${url}", a file on the server's own disk, and this is a production deployment. ` +
-        "Serverless hosts have a read-only, per-request filesystem, so a file database cannot be read or written there. " +
-        "Point DATABASE_URL at a libsql database (libsql://…) and set DATABASE_AUTH_TOKEN. See DEPLOYMENT.md.",
+      `DATABASE_URL is "${url}", which is a file path, but this application now stores its data in PostgreSQL. ` +
+        "Set DATABASE_URL to a postgresql:// connection string — see DEPLOYMENT.md.",
     );
   }
 
-  const authToken = serverEnv.databaseAuthToken;
-  const adapter = new PrismaLibSql({
-    url,
-    // Only remote databases take a token; passing one to a file URL is an error.
-    ...(authToken && !isFileDatabase(url) ? { authToken } : {}),
-  });
+  const adapter = new PrismaPg({ connectionString: url });
 
   return new PrismaClient({
     adapter,
@@ -47,7 +43,7 @@ function getClient(): PrismaClient {
 
 /**
  * Created on first use rather than on import, so building the app never opens
- * the database file.
+ * a connection.
  */
 export const db: PrismaClient = new Proxy({} as PrismaClient, {
   get(_target, property) {

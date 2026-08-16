@@ -1,8 +1,7 @@
 import "dotenv/config";
 import { createHmac, createHash, randomBytes, scrypt } from "node:crypto";
 import { promisify } from "node:util";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { createScriptClient } from "./client";
 
 /**
  * Walks the exact path a user takes: reveal the answer, paste the revealed
@@ -16,9 +15,7 @@ const sign = (token: string) => createHmac("sha256", SECRET).update(token).diges
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
-  const db = new PrismaClient({
-    adapter: new PrismaLibSql({ url: process.env.DATABASE_URL ?? "file:./prisma/dsaforge.db" }),
-  });
+  const db = createScriptClient();
 
   const email = `reveal+${Date.now()}@example.com`;
   const scryptAsync = promisify(scrypt) as (

@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { createHmac, createHash, randomBytes } from "node:crypto";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { createScriptClient } from "./client";
 
 /**
  * End-to-end smoke test driven directly against the real database and the
@@ -13,8 +12,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
  * the resulting session over real HTTP.
  */
 
-const url = process.env.DATABASE_URL ?? "file:./prisma/dsaforge.db";
-const db = new PrismaClient({ adapter: new PrismaLibSql({ url }) });
+const db = createScriptClient();
 const BASE = "http://127.0.0.1:3000";
 const SECRET = createHash("sha256").update(`dsa-forge-dev:${process.cwd()}`).digest("hex");
 

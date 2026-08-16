@@ -1,20 +1,18 @@
 // DSA Forge — Prisma schema
 //
-// Storage is PostgreSQL (Neon). The connection string lives only in the server
-// environment as DATABASE_URL and is never exposed to client code.
-//
-// Scalar-list columns are modelled as Json and read through the helpers in
-// src/lib/json-fields.ts. That started as a SQLite limitation and is kept
-// deliberately: the shape is already written into the seed data, the JSON
-// helpers and every query, and changing it would buy nothing.
+// Storage is a local SQLite file (prisma/dsaforge.db) so the app runs with no
+// database server and no hosted account. Two SQLite constraints shape this
+// file: scalar lists are unsupported (those columns are Json, read through the
+// helpers in src/lib/json-fields.ts), and there is no TEXT native type
+// (String is already unbounded).
 
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../src/generated/prisma-sqlite"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // ---------------------------------------------------------------------------
@@ -381,7 +379,7 @@ model Question {
   supportedLanguages Json?
   /// Comma-delimited mirror of supportedLanguages, wrapped in separators
   /// (",C,CPP,") so the Practice Arena can filter by language with a plain
-  /// substring match, without reaching inside the JSON column.
+  /// substring match. SQLite cannot query inside a JSON column.
   languageTags       String  @default(",C,CPP,JAVA,PYTHON,")
   timeLimitMs        Int        @default(2000)
   memoryLimitMb      Int        @default(256)

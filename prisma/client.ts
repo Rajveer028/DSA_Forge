@@ -1,43 +1,49 @@
 import "dotenv/config";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
 /**
  * Prisma client for the command-line scripts in this folder.
  *
- * The scripts have to reach whichever database the operator is pointing at —
- * the local file during development, or a remote libsql database (Turso) when
- * seeding or inspecting a deployment. That is the only difference between the
- * two, so it lives here rather than being repeated in every script.
+ * The scripts reach whichever database DATABASE_URL points at, so seeding and
+ * verifying a deployment differ from local work by that one variable and
+ * nothing else.
  */
 
-export const DATABASE_URL =
-  process.env.DATABASE_URL ?? process.env.TURSO_DATABASE_URL ?? "file:./prisma/dsaforge.db";
+export const DATABASE_URL = process.env.DATABASE_URL ?? "";
 
-export const DATABASE_AUTH_TOKEN =
-  process.env.DATABASE_AUTH_TOKEN ?? process.env.TURSO_AUTH_TOKEN;
-
-/** True for a database that is a file on this machine rather than a service. */
+/** True for the old on-disk SQLite default, which no longer works. */
 export function isFileDatabase(url = DATABASE_URL) {
-  return url.startsWith("file:") || (!url.includes("://") && !url.startsWith(":memory:"));
+  return url.startsWith("file:") || (url.length > 0 && !url.includes("://"));
 }
 
 /** Short, safe description of the target, for a script's opening line. */
 export function describeTarget(url = DATABASE_URL) {
+  if (!url) return "no DATABASE_URL set";
   if (isFileDatabase(url)) return `local file ${url.replace(/^file:/, "")}`;
   try {
-    return `remote ${new URL(url).host}`;
+    const parsed = new URL(url);
+    // Never print the password.
+    return `${parsed.host}${parsed.pathname}`;
   } catch {
     return "remote database";
   }
 }
 
 export function createScriptClient(): PrismaClient {
+  if (!DATABASE_URL) {
+    throw new Error(
+      "DATABASE_URL is not set. Copy .env.example to .env and point it at your PostgreSQL database.",
+    );
+  }
+  if (isFileDatabase()) {
+    throw new Error(
+      `DATABASE_URL is "${DATABASE_URL}", a file path. This project now stores its data in PostgreSQL — ` +
+        "set a postgresql:// connection string instead.",
+    );
+  }
+
   return new PrismaClient({
-    adapter: new PrismaLibSql({
-      url: DATABASE_URL,
-      // A file database rejects an auth token, so only send one to a service.
-      ...(DATABASE_AUTH_TOKEN && !isFileDatabase() ? { authToken: DATABASE_AUTH_TOKEN } : {}),
-    }),
+    adapter: new PrismaPg({ connectionString: DATABASE_URL }),
   });
 }

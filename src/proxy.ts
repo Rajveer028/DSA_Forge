@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
 
 /**
@@ -20,22 +20,29 @@ import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
  * matcher are unchanged.
  */
 
-const PUBLIC_ROUTES = [
-  "/",
+const PUBLIC_PREFIXES = [
   "/features",
-  "/features/(.*)",
   "/about",
-  "/about/(.*)",
   "/sign-in",
-  "/sign-in/(.*)",
   "/sign-up",
-  "/sign-up/(.*)",
-  "/api/health",
   // Clerk's own endpoints must stay reachable while signed out.
-  "/__clerk/(.*)",
+  "/__clerk",
 ];
 
-const isPublicRoute = createRouteMatcher(PUBLIC_ROUTES);
+const PUBLIC_EXACT = new Set(["/", "/api/health"]);
+
+/**
+ * Plain prefix matching rather than Clerk's `createRouteMatcher`, which is
+ * deprecated. The real access control lives in the pages and route handlers
+ * anyway — see the note above — so this only decides who gets redirected.
+ */
+function isPublicRoute(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  if (PUBLIC_EXACT.has(pathname)) return true;
+  return PUBLIC_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
 
 const clerkEnabled = Boolean(
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY,

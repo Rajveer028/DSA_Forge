@@ -4,8 +4,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import os from "node:os";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { createScriptClient } from "./client";
 import { LANGUAGE_SPECS, localRunCommand } from "../src/lib/execution/languages";
 import { outputMatches } from "../src/lib/execution/judge";
 import { QUESTION_CATALOG, SPARE_QUESTIONS } from "./seed-data";
@@ -246,9 +245,7 @@ async function pool<T, R>(items: T[], limit: number, worker: (item: T) => Promis
 }
 
 async function main() {
-  const db = new PrismaClient({
-    adapter: new PrismaLibSql({ url: process.env.DATABASE_URL ?? "file:./prisma/dsaforge.db" }),
-  });
+  const db = createScriptClient();
 
   const slugFilter = arg("slug");
   const langFilter = arg("lang")?.toUpperCase() as Language | undefined;
