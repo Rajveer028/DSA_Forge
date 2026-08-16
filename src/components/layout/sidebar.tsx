@@ -79,7 +79,7 @@ export function Sidebar({
           />
         )}
         <item.icon
-          className={cn("size-[18px] shrink-0", active && accent ? accent.icon : undefined)}
+          className={cn("size-4.5 shrink-0", active && accent ? accent.icon : undefined)}
         />
         {!isCollapsed && (
           <span className="min-w-0 flex-1">

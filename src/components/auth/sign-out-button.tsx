@@ -40,7 +40,7 @@ function Shell({
         className,
       )}
     >
-      <LogOut className="size-[18px] shrink-0" />
+      <LogOut className="size-4.5 shrink-0" />
       {collapsed ? <span className="sr-only">Logout</span> : "Logout"}
     </button>
   );
