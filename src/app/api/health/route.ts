@@ -31,9 +31,11 @@ export async function GET() {
         database: {
           configured: env.database,
           reachable: database,
-          // Names the single most common deployment mistake without printing
-          // the URL, which may carry credentials.
-          ...(env.databaseIsFile ? { kind: "file" as const } : { kind: "remote" as const }),
+          // Names the single most common deployment mistakes without printing
+          // the URL, which carries credentials. "unset" is its own case: an
+          // empty string is not a file path, and calling it "remote" sent people
+          // looking for a network problem that did not exist.
+          kind: !env.databaseUrl ? "unset" : env.databaseIsFile ? "file" : "remote",
         },
         auth: { configured: env.auth, sessionSecret: env.sessionSecretConfigured },
         ai: { configured: isAIConfigured() },

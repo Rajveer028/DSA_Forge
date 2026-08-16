@@ -18,6 +18,16 @@ const globalForPrisma = globalThis as unknown as {
 function createClient(): PrismaClient {
   const url = serverEnv.databaseUrl;
 
+  // An unset URL is the single most common deployment mistake, and the least
+  // self-explanatory: `pg` quietly falls back to a local socket and fails with
+  // a connection error that says nothing about the real cause.
+  if (!url) {
+    throw new Error(
+      "DATABASE_URL is not set, so the server has no database to connect to. " +
+        "Set it to your PostgreSQL connection string in the deployment's environment variables — see DEPLOYMENT.md.",
+    );
+  }
+
   // Fail with the actual reason rather than letting every query die one by one
   // inside the driver. A `file:` URL here means DATABASE_URL never arrived and
   // the old SQLite default is still in place.

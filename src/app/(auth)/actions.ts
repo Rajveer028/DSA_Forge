@@ -47,13 +47,15 @@ function configurationProblem(error: unknown, verb: string): string {
   const known =
     /SESSION_SECRET/.test(message)
       ? "The server is missing SESSION_SECRET, so it cannot sign your session cookie."
-      : /production deployment|read-only|SQLITE_CANTOPEN|unable to open database|no such table/i.test(
-            message,
-          )
-        ? "The server cannot reach its database."
-        : /UNAUTHORIZED|401|auth token|authentication/i.test(message)
-          ? "The server was refused by its database — the auth token looks wrong or expired."
-          : null;
+      : /DATABASE_URL is not set/i.test(message)
+        ? "The server has no DATABASE_URL, so it has no database to write your account to."
+        : /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|connect |connection refused|terminating connection|does not exist|relation .* does not exist|read-only|no such table/i.test(
+              message,
+            )
+          ? "The server cannot reach its database."
+          : /password authentication failed|UNAUTHORIZED|401|auth token|authentication/i.test(message)
+            ? "The server was refused by its database — the credentials look wrong or expired."
+            : null;
 
   if (!known) {
     return `We could not ${verb}. Please try again in a moment.`;
