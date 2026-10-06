@@ -70,9 +70,21 @@ export class QueueOverflowError extends Error {
 
 const globalForQueue = globalThis as unknown as { forgeQueue?: WorkQueue };
 
+/**
+ * Vercel environment variables are often created with an empty value while
+ * copying `.env.example`. `Number("")` is zero, which would permanently queue
+ * every job (zero concurrency) or reject every job (zero pending capacity).
+ */
+function positiveIntegerEnv(name: string, fallback: number) {
+  const raw = process.env[name]?.trim();
+  if (!raw) return fallback;
+  const value = Number(raw);
+  return Number.isSafeInteger(value) && value > 0 ? value : fallback;
+}
+
 export const executionQueue: WorkQueue =
   globalForQueue.forgeQueue ??
   (globalForQueue.forgeQueue = new WorkQueue(
-    Number(process.env.EXECUTION_CONCURRENCY ?? 4),
-    Number(process.env.EXECUTION_MAX_PENDING ?? 120),
+    positiveIntegerEnv("EXECUTION_CONCURRENCY", 4),
+    positiveIntegerEnv("EXECUTION_MAX_PENDING", 120),
   ));
