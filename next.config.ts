@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  turbopack: { root: process.cwd() },
   // The dev server 403s any fetch/HMR request whose Origin header isn't on
   // this allowlist. Chrome sends an Origin header on every chunk fetch, and
   // by default only http://localhost:3000 is allowed — visiting the app via

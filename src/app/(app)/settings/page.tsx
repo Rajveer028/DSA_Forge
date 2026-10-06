@@ -21,7 +21,7 @@ export default async function SettingsPage() {
     (await db.userPreferences.create({ data: { userId: profile.id } }));
 
   const env = envStatus();
-  let sandbox: { driver: string; isolated: boolean } | null = null;
+  let sandbox: { driver: string; isolated: boolean; available?: boolean; reason?: string } | null = null;
   try {
     sandbox = sandboxStatus();
   } catch {
@@ -77,15 +77,19 @@ export default async function SettingsPage() {
               />
               <StatusRow
                 label="Code execution"
-                ok={Boolean(sandbox)}
+                ok={Boolean(sandbox?.available ?? sandbox)}
                 detail={
                   sandbox
-                    ? sandbox.isolated
-                      ? "Isolated sandbox worker"
-                      : "Local dev driver (not isolated)"
+                    ? !sandbox.available && sandbox.reason
+                      ? sandbox.reason
+                      : sandbox.driver === "piston"
+                        ? "Piston compiler (works on Vercel)"
+                        : sandbox.isolated
+                          ? "Isolated sandbox worker"
+                          : "Local dev driver (not isolated)"
                     : "Unavailable"
                 }
-                warn={Boolean(sandbox && !sandbox.isolated)}
+                warn={Boolean(sandbox && (!sandbox.isolated || !sandbox.available))}
               />
               <p className="pt-2 text-xs leading-relaxed text-text-subtle">
                 Secrets are never exposed to the browser. This panel reports booleans only.

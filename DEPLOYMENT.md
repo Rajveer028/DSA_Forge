@@ -59,21 +59,26 @@ fastest way to tell a configuration problem from a code problem: a wall of 503s
 means the database or session secret is wrong, while a single unexpected status
 points at one route.
 
-## What still will not work, and why
+## Code execution on Vercel
 
-**Run and Submit.** Code execution compiles and runs real programs, which needs
-gcc, javac and python plus a sandbox — none of which exist on Vercel, and the
-local driver refuses to start in production on purpose (it is not a security
-boundary).
+Vercel cannot run gcc/javac, so the old local sandbox was refused in
+production and Run/Submit returned **503 EXECUTION_UNAVAILABLE**.
 
-This is handled rather than left to crash: `/api/practice/run` answers **503
-EXECUTION_UNAVAILABLE** with a plain explanation, the editor shows it as a
-message, and `/api/health` reports `execution.available: false` with the reason.
-Everything else works — sign-up, sign-in, browsing all 300 problems, revealing
-solutions, and the university portal including test codes.
+That is no longer the default. A production deploy **without**
+`EXECUTION_SERVICE_URL` now judges through the **Piston** compiler API
+(`PISTON_URL`, default `https://emkc.org/api/v2/piston`). The public endpoint
+requires a valid `PISTON_API_KEY`; alternatively use a self-hosted Piston
+endpoint. Student code never runs inside the Next.js process.
 
-To enable execution, deploy the containerised worker in [`sandbox/`](sandbox/)
-to a host that runs Docker — Railway, Fly.io, Render or any VPS — and set:
+Optional:
+
+| Variable | Value |
+|---|---|
+| `PISTON_URL` | Self-hosted Piston base, e.g. `https://piston.yourdomain/api/v2/piston` |
+| `PISTON_API_KEY` | Required by the public Piston endpoint; set a valid bearer token |
+| `EXECUTION_DRIVER` | `piston` (explicit) · `remote` (Docker worker) · `none` (disable) |
+
+To use the containerised worker in [`sandbox/`](sandbox/) instead:
 
 | Variable | Value |
 |---|---|

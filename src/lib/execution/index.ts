@@ -3,6 +3,7 @@ import { serverEnv } from "@/lib/env";
 import { db } from "@/lib/db";
 import { LocalSandboxDriver } from "@/lib/execution/drivers/local";
 import { RemoteSandboxDriver } from "@/lib/execution/drivers/remote";
+import { PistonSandboxDriver } from "@/lib/execution/drivers/piston";
 import { judge } from "@/lib/execution/judge";
 import { ExecutionUnavailableError } from "@/lib/execution/errors";
 import { executionQueue } from "@/lib/execution/queue";
@@ -19,19 +20,48 @@ export { judge, scoreSubmission, normalizeOutput, outputMatches } from "@/lib/ex
 export { ExecutionUnavailableError } from "@/lib/execution/errors";
 export type { SandboxJob, SandboxTestCase } from "@/lib/execution/types";
 
+export type ExecutionDriverName = "local" | "remote" | "piston" | "none";
+
+/**
+ * Picks the judge backend.
+ *
+ * - Dedicated Docker worker (`EXECUTION_SERVICE_URL` / `remote`) always wins.
+ * - Production without a worker uses Piston so Vercel can still compile.
+ * - Local development uses the host toolchain unless `EXECUTION_DRIVER=piston`.
+ */
+export function resolveExecutionDriver(): ExecutionDriverName {
+  const configured = serverEnv.executionDriver;
+  if (configured === "none" || configured === "off" || configured === "disabled") {
+    return "none";
+  }
+  if (configured === "remote" || Boolean(serverEnv.executionServiceUrl)) {
+    return "remote";
+  }
+  if (configured === "piston") return "piston";
+  if (serverEnv.isProduction) return "piston";
+  return "local";
+}
+
 /**
  * Whether code can actually be executed here.
  *
  * The local driver compiles and runs programs on the host with a stripped
  * environment and hard limits. That is fine on a developer machine and is
  * refused in production on purpose — it shares the kernel and filesystem with
- * the app, so it is not a security boundary. A production deployment therefore
- * needs the containerised worker in `sandbox/`, reached over
- * EXECUTION_SERVICE_URL.
+ * the app, so it is not a security boundary.
+ *
+ * A production deployment without `EXECUTION_SERVICE_URL` uses the Piston
+ * compiler API instead of failing with EXECUTION_UNAVAILABLE.
  */
 export function executionAvailability(): { available: boolean; reason?: string } {
-  const remote = serverEnv.executionDriver === "remote" || serverEnv.executionServiceUrl;
-  if (remote) {
+  const driver = resolveExecutionDriver();
+  if (driver === "none") {
+    return {
+      available: false,
+      reason: "Code execution is disabled (EXECUTION_DRIVER=none).",
+    };
+  }
+  if (driver === "remote") {
     if (!serverEnv.executionServiceUrl) {
       return {
         available: false,
@@ -41,16 +71,17 @@ export function executionAvailability(): { available: boolean; reason?: string }
     }
     return { available: true };
   }
-
-  if (serverEnv.isProduction) {
+  if (
+    driver === "piston" &&
+    serverEnv.pistonUrl.replace(/\/$/, "") === "https://emkc.org/api/v2/piston" &&
+    !serverEnv.pistonApiKey
+  ) {
     return {
       available: false,
       reason:
-        "Running code is not available on this deployment. It needs the sandboxed worker service — " +
-        "everything else, including browsing problems and revealing solutions, works normally.",
+        "The public Piston service rejected requests without authorization. Set PISTON_API_KEY or configure a self-hosted PISTON_URL.",
     };
   }
-
   return { available: true };
 }
 
@@ -64,10 +95,10 @@ let driver: SandboxDriver | null = null;
 
 export function getSandboxDriver(): SandboxDriver {
   if (driver) return driver;
-  driver =
-    serverEnv.executionDriver === "remote" || serverEnv.executionServiceUrl
-      ? new RemoteSandboxDriver()
-      : new LocalSandboxDriver();
+  const name = resolveExecutionDriver();
+  if (name === "remote") driver = new RemoteSandboxDriver();
+  else if (name === "piston") driver = new PistonSandboxDriver();
+  else driver = new LocalSandboxDriver();
   return driver;
 }
 
@@ -185,10 +216,20 @@ export async function runEphemeral(
 
 export function sandboxStatus() {
   const { available, reason } = executionAvailability();
+  const name = resolveExecutionDriver();
+  if (name === "none") {
+    return {
+      driver: "none" as const,
+      queue: executionQueue.stats,
+      isolated: false,
+      available,
+      ...(reason ? { reason } : {}),
+    };
+  }
   return {
     driver: getSandboxDriver().name,
     queue: executionQueue.stats,
-    isolated: getSandboxDriver().name === "remote",
+    isolated: getSandboxDriver().name === "remote" || getSandboxDriver().name === "piston",
     available,
     ...(reason ? { reason } : {}),
   };

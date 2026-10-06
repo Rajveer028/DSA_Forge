@@ -94,6 +94,8 @@ export const serverEnv = {
   get executionDriver() {
     // "local"  – in-process guarded runner (dev only, requires local toolchain)
     // "remote" – dedicated sandbox service (Docker workers) via EXECUTION_SERVICE_URL
+    // "piston" – HTTP compiler (Piston API). Used automatically in production
+    //            when no Docker worker is configured, so Vercel can still judge.
     return (optional("EXECUTION_DRIVER") ?? "local").toLowerCase();
   },
   get executionServiceUrl() {
@@ -101,6 +103,12 @@ export const serverEnv = {
   },
   get executionServiceToken() {
     return optional("EXECUTION_SERVICE_TOKEN");
+  },
+  get pistonUrl() {
+    return optional("PISTON_URL") ?? "https://emkc.org/api/v2/piston";
+  },
+  get pistonApiKey() {
+    return optional("PISTON_API_KEY");
   },
   get executionTimeoutMs() {
     return Number(optional("EXECUTION_TIMEOUT_MS") ?? 5000);
