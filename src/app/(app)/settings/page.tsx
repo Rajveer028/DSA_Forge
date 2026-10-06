@@ -82,7 +82,9 @@ export default async function SettingsPage() {
                   sandbox
                     ? !sandbox.available && sandbox.reason
                       ? sandbox.reason
-                      : sandbox.driver === "piston"
+                      : sandbox.driver === "wandbox"
+                        ? "Wandbox public compiler (shared service limits)"
+                        : sandbox.driver === "piston"
                         ? "Piston compiler (works on Vercel)"
                         : sandbox.isolated
                           ? "Isolated sandbox worker"

@@ -94,8 +94,8 @@ export const serverEnv = {
   get executionDriver() {
     // "local"  – in-process guarded runner (dev only, requires local toolchain)
     // "remote" – dedicated sandbox service (Docker workers) via EXECUTION_SERVICE_URL
-    // "piston" – HTTP compiler (Piston API). Used automatically in production
-    //            when no Docker worker is configured, so Vercel can still judge.
+    // "piston" – configured Piston API endpoint
+    // "wandbox" – public Wandbox API, used on Vercel if Piston has no key
     return (optional("EXECUTION_DRIVER") ?? "local").toLowerCase();
   },
   get executionServiceUrl() {

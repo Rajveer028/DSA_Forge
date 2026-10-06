@@ -277,10 +277,11 @@ src/
 
 ## Production notes
 
-1. **Code execution on Vercel uses Piston by default.** You do not need a
-   Docker worker for Run/Submit to work. Optional: `EXECUTION_DRIVER=remote`
-   plus `EXECUTION_SERVICE_URL` and `EXECUTION_SERVICE_TOKEN` for the
-   containerised worker in `sandbox/`. The public Piston endpoint requires a valid `PISTON_API_KEY`; use `PISTON_URL` to configure another service.
+1. **Code execution on Vercel uses Wandbox if Piston has no key.** The public
+   Wandbox service has same-IP limits and no SLA; use a self-hosted Piston or
+   Docker worker for exams and sustained traffic. Set `PISTON_API_KEY` to use
+   public Piston. For the Docker worker, set `EXECUTION_DRIVER=remote`,
+   `EXECUTION_SERVICE_URL` and `EXECUTION_SERVICE_TOKEN`.
 2. **Run migrations, not `db push`.** `npm run db:deploy`.
 3. **Use Neon's pooled connection string** — the app opens a connection per
    serverless invocation.

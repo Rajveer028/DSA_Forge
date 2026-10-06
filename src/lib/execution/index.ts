@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { LocalSandboxDriver } from "@/lib/execution/drivers/local";
 import { RemoteSandboxDriver } from "@/lib/execution/drivers/remote";
 import { PistonSandboxDriver } from "@/lib/execution/drivers/piston";
+import { WandboxSandboxDriver } from "@/lib/execution/drivers/wandbox";
 import { judge } from "@/lib/execution/judge";
 import { ExecutionUnavailableError } from "@/lib/execution/errors";
 import { executionQueue } from "@/lib/execution/queue";
@@ -20,14 +21,14 @@ export { judge, scoreSubmission, normalizeOutput, outputMatches } from "@/lib/ex
 export { ExecutionUnavailableError } from "@/lib/execution/errors";
 export type { SandboxJob, SandboxTestCase } from "@/lib/execution/types";
 
-export type ExecutionDriverName = "local" | "remote" | "piston" | "none";
+export type ExecutionDriverName = "local" | "remote" | "piston" | "wandbox" | "none";
 
 /**
  * Picks the judge backend.
  *
  * - Dedicated Docker worker (`EXECUTION_SERVICE_URL` / `remote`) always wins.
- * - Production without a worker uses Piston so Vercel can still compile.
- * - Local development uses the host toolchain unless `EXECUTION_DRIVER=piston`.
+ * - Production uses Piston when configured, otherwise the public Wandbox API.
+ * - Local development uses the host toolchain unless a remote driver is selected.
  */
 export function resolveExecutionDriver(): ExecutionDriverName {
   const configured = serverEnv.executionDriver;
@@ -37,8 +38,15 @@ export function resolveExecutionDriver(): ExecutionDriverName {
   if (configured === "remote" || Boolean(serverEnv.executionServiceUrl)) {
     return "remote";
   }
-  if (configured === "piston") return "piston";
-  if (serverEnv.isProduction) return "piston";
+  if (configured === "wandbox") return "wandbox";
+  const publicPiston =
+    serverEnv.pistonUrl.replace(/\/$/, "") === "https://emkc.org/api/v2/piston";
+  if (configured === "piston") {
+    return publicPiston && !serverEnv.pistonApiKey ? "wandbox" : "piston";
+  }
+  if (serverEnv.isProduction) {
+    return publicPiston && !serverEnv.pistonApiKey ? "wandbox" : "piston";
+  }
   return "local";
 }
 
@@ -50,8 +58,8 @@ export function resolveExecutionDriver(): ExecutionDriverName {
  * refused in production on purpose — it shares the kernel and filesystem with
  * the app, so it is not a security boundary.
  *
- * A production deployment without `EXECUTION_SERVICE_URL` uses the Piston
- * compiler API instead of failing with EXECUTION_UNAVAILABLE.
+ * Production uses Piston when its endpoint is configured, and falls back to
+ * Wandbox when the public Piston API key is absent.
  */
 export function executionAvailability(): { available: boolean; reason?: string } {
   const driver = resolveExecutionDriver();
@@ -71,17 +79,6 @@ export function executionAvailability(): { available: boolean; reason?: string }
     }
     return { available: true };
   }
-  if (
-    driver === "piston" &&
-    serverEnv.pistonUrl.replace(/\/$/, "") === "https://emkc.org/api/v2/piston" &&
-    !serverEnv.pistonApiKey
-  ) {
-    return {
-      available: false,
-      reason:
-        "The public Piston service rejected requests without authorization. Set PISTON_API_KEY or configure a self-hosted PISTON_URL.",
-    };
-  }
   return { available: true };
 }
 
@@ -98,6 +95,7 @@ export function getSandboxDriver(): SandboxDriver {
   const name = resolveExecutionDriver();
   if (name === "remote") driver = new RemoteSandboxDriver();
   else if (name === "piston") driver = new PistonSandboxDriver();
+  else if (name === "wandbox") driver = new WandboxSandboxDriver();
   else driver = new LocalSandboxDriver();
   return driver;
 }
@@ -229,7 +227,10 @@ export function sandboxStatus() {
   return {
     driver: getSandboxDriver().name,
     queue: executionQueue.stats,
-    isolated: getSandboxDriver().name === "remote" || getSandboxDriver().name === "piston",
+    isolated:
+      getSandboxDriver().name === "remote" ||
+      getSandboxDriver().name === "piston" ||
+      getSandboxDriver().name === "wandbox",
     available,
     ...(reason ? { reason } : {}),
   };

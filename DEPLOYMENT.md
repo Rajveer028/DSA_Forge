@@ -64,19 +64,20 @@ points at one route.
 Vercel cannot run gcc/javac, so the old local sandbox was refused in
 production and Run/Submit returned **503 EXECUTION_UNAVAILABLE**.
 
-That is no longer the default. A production deploy **without**
-`EXECUTION_SERVICE_URL` now judges through the **Piston** compiler API
-(`PISTON_URL`, default `https://emkc.org/api/v2/piston`). The public endpoint
-requires a valid `PISTON_API_KEY`; alternatively use a self-hosted Piston
-endpoint. Student code never runs inside the Next.js process.
+Production uses a configured Docker worker first, then Piston when a
+`PISTON_API_KEY` is available. With neither configured, it falls back to the
+public **Wandbox** compiler API, so Run/Submit does not silently stop on Vercel.
+The public Wandbox service has same-IP rate limits and no SLA; use a self-hosted
+Piston worker for exams or sustained traffic. Student code never runs inside the
+Next.js process.
 
 Optional:
 
 | Variable | Value |
 |---|---|
-| `PISTON_URL` | Self-hosted Piston base, e.g. `https://piston.yourdomain/api/v2/piston` |
-| `PISTON_API_KEY` | Required by the public Piston endpoint; set a valid bearer token |
-| `EXECUTION_DRIVER` | `piston` (explicit) · `remote` (Docker worker) · `none` (disable) |
+| `PISTON_URL` | Optional Piston base; defaults to `https://emkc.org/api/v2/piston` |
+| `PISTON_API_KEY` | Required to use the public Piston endpoint |
+| `EXECUTION_DRIVER` | `piston`, `wandbox`, `remote` (Docker worker), or `none` |
 
 To use the containerised worker in [`sandbox/`](sandbox/) instead:
 
